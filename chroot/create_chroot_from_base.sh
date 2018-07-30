@@ -92,10 +92,22 @@ else
           cp -rf ${ISMRMRD_PYTHON_FOLDER} "${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-root/gadgetron/${CHROOT_GADGETRON_INSTALL_PREFIX}/share/gadgetron/python"
         fi
 
+
+	# D. Nguyen additions to support 
+	cp ${CHROOT_GADGETRON_SOURCE_DIR}/docker/start_supervisor ${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-root/gadgetron/opt
+	cp ${CHROOT_GADGETRON_BINARY_DIR}/chroot/supervisord.conf ${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-root/gadgetron/opt
+
+	# D. Nguyen addition for extra directories (2018-07-30)
+	# Remove all scripts from BART script directory, will be mounted to %CustomerIce%/gadgetron/bart
+	rm -rf ${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-root/gadgetron${CHROOT_GADGETRON_INSTALL_PREFIX}/share/gadgetron/bart/*
+	# Will be mounted to %CustomerIce%/gadgetron/lib
+	mkdir -p ${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-root/gadgetron${CHROOT_GADGETRON_INSTALL_PREFIX}/lib_extra
+	
+
         TAR_FILE_NAME=gadgetron-`date '+%Y%m%d-%H%M'`-${CHROOT_GIT_SHA1_HASH:0:8}
         IMAGE_FILE_NAME=${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-backups/${TAR_FILE_NAME}.img
 
-        tar -zcf "${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-backups/${TAR_FILE_NAME}.tar.gz" --directory "${CHROOT_GADGETRON_BINARY_DIR}/chroot" --exclude=./chroot-root/gadgetron/var --exclude=./chroot-root/gadgetron/dev --exclude=./chroot-root/gadgetron/sys --exclude=./chroot-root/gadgetron/proc --exclude=./chroot-root/gadgetron/root ./chroot-root
+        tar -zcf "${CHROOT_GADGETRON_BINARY_DIR}/chroot/chroot-backups/${TAR_FILE_NAME}.tar.gz" --directory "${CHROOT_GADGETRON_BINARY_DIR}/chroot" --exclude=./chroot-root/gadgetron/dev --exclude=./chroot-root/gadgetron/sys --exclude=./chroot-root/gadgetron/proc --exclude=./chroot-root/gadgetron/root ./chroot-root
 
         dd if=/dev/zero of=${IMAGE_FILE_NAME} bs=${CHROOT_IMAGE_SIZE}k seek=1024 count=0
         mke2fs -F -t ext3 ${IMAGE_FILE_NAME}

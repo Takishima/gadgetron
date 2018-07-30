@@ -15,6 +15,7 @@ configure_file("run-gt_alive.sh.in" ${CMAKE_CURRENT_BINARY_DIR}/run-gt_alive.sh 
 configure_file("run-siemens_to_ismrmrd.sh.in" ${CMAKE_CURRENT_BINARY_DIR}/run-siemens_to_ismrmrd.sh @ONLY)
 configure_file("mount_image.sh.in" ${CMAKE_CURRENT_BINARY_DIR}/mount_image.sh @ONLY)
 configure_file("start-gadgetron-from-image.sh.in" ${CMAKE_CURRENT_BINARY_DIR}/start-gadgetron-from-image.sh @ONLY)
+configure_file("supervisord.conf.in" ${CMAKE_CURRENT_BINARY_DIR}/supervisord.conf @ONLY)
 
 set (LIBRARY_PATHS ${ISMRMRD_LIB_DIR})
 
