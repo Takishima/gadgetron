@@ -2,6 +2,7 @@ FROM nvidia/cuda:9.2-cudnn7-devel-ubuntu18.04
 
 ARG BART_URL=https://github.com/mrirecon/bart
 ARG BART_BRANCH=master
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update --quiet && \
     apt-get install --no-install-recommends --no-install-suggests --yes  \
@@ -54,7 +55,6 @@ RUN cd /opt && \
     make shared && \
     make -j $(nproc) install
 
-#BART
 # BART
 RUN cd /opt/code && \
     git clone ${BART_URL} --branch ${BART_BRANCH} --single-branch && \
@@ -74,6 +74,14 @@ RUN cd /opt && \
     cd ceres-bin && \
     cmake ../ceres-solver-1.14.0 && \
     make -j20 && \
+    make install
+
+RUN cd opt && \
+    wget https://cmake.org/files/v3.12/cmake-3.12.0.tar.gz && \
+    tar zxf cmake-3.12.0.tar.gz && \
+    cd cmake-3.12.0 && \
+    ./bootstrap --parallel=$(nproc) -- -DCMAKE_BUILD_TYPE:STRING=Release && \
+    make -j $(nproc) && \
     make install
 
 #Set more environment variables in preparation for Gadgetron installation
