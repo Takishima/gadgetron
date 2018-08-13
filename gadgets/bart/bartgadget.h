@@ -39,6 +39,14 @@
 #define EXPORTGADGETS_bartgadget
 #endif
 
+#ifdef BART_USE_LUA
+	// Include lua
+	extern "C" {
+		#include "lua.h"
+		#include "lualib.h"
+		#include "lauxlib.h"
+	}
+#endif
 
 namespace Gadgetron {
      namespace fs = boost::filesystem;
@@ -72,6 +80,22 @@ namespace Gadgetron {
 
 	  BartGadget();
 	  ~BartGadget() = default;
+
+	  void local_gdebug(std::string s)
+	  {
+		  GDEBUG_STREAM(s);
+	  }
+
+	  void local_ginfo(std::string s)
+	  {
+		  GINFO_STREAM(s);
+	  }
+
+	  void local_gerror(std::string s)
+	  {
+		  GERROR_STREAM(s);
+	  }
+
 
      protected:
 	  GADGET_PROPERTY(isVerboseON, bool, "Display some information about the incoming data", false);
@@ -108,6 +132,7 @@ namespace Gadgetron {
 	  
      };
 
+     bool call_BART(std::string cmdline, std::string & outStr);
      bool call_BART(std::string cmdline);
 
      // Read BART files     

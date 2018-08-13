@@ -14,6 +14,7 @@
 
 #include "bartgadget.h"
 #include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 #include <sstream>
 #include <utility>
 #include <numeric>
@@ -37,6 +38,9 @@
 #endif
 
 #include "bart/bart_embed_api.h"
+#ifdef BART_USE_LUA
+#	include "luasupport.h"
+#endif
 
 enum bart_debug_levels { BART_DP_ERROR, BART_DP_WARN, BART_DP_INFO, BART_DP_DEBUG1, BART_DP_DEBUG2, BART_DP_DEBUG3, BART_DP_DEBUG4, BART_DP_TRACE, BART_DP_ALL };
 
@@ -357,6 +361,7 @@ namespace Gadgetron {
 	       }
 
 	  }
+	  GINFO_STREAM("End of process_config");
 	  return GADGET_OK;
      }
 
@@ -364,6 +369,8 @@ namespace Gadgetron {
      {
 	  static std::mutex mtx;
 	  std::lock_guard<std::mutex> guard(mtx);
+
+	  GINFO_STREAM("Process start");
 
 	  constexpr auto memonly_cfl = 
 #ifdef MEMONLY_CFL
@@ -516,6 +523,91 @@ namespace Gadgetron {
 	       /*** CALL BART COMMAND LINE from the scripting file ***/
 	       GDEBUG("Starting processing user script\n");
 
+		   std::string outputFileName;
+
+#ifdef BART_USE_LUA
+		   std::string ext = fs::path(command_script_).extension().string();
+		   boost::algorithm::to_lower(ext);
+		   GINFO_STREAM("File extension " << ext);
+		   if (!ext.compare(".lua"))
+		   { // lua file!
+				lua_State *lua_state = lua_open();
+				if (!lua_state)
+				{
+					GERROR("Error initializing Lua");
+					return GADGET_FAIL;
+				}
+				luaL_openlibs(lua_state);
+
+
+				lua_pushlightuserdata(lua_state, (void*)this);
+				lua_setglobal(lua_state, "_bartGadget");
+
+				lua_pushcfunction(lua_state, lua_ginfo);
+				lua_setglobal(lua_state, "ginfo");
+				lua_pushcfunction(lua_state, lua_gdebug);
+				lua_setglobal(lua_state, "gdebug");
+				lua_pushcfunction(lua_state, lua_bart);
+				lua_setglobal(lua_state, "bart");
+
+				LUA_REGISTER_PARAM(recon_matrix_x);
+				LUA_REGISTER_PARAM(recon_matrix_y);
+				LUA_REGISTER_PARAM(recon_matrix_z);
+				LUA_REGISTER_PARAM(FOV_x);
+				LUA_REGISTER_PARAM(FOV_y);
+				LUA_REGISTER_PARAM(FOV_z);
+				LUA_REGISTER_PARAM(acc_factor_PE1);
+				LUA_REGISTER_PARAM(acc_factor_PE2);
+				LUA_REGISTER_PARAM(reference_lines_PE1);
+				LUA_REGISTER_PARAM(reference_lines_PE2);
+				
+
+				int retVal;
+
+				retVal = luaL_dostring(lua_state, LUA_HELPER_FUNCTIONS);
+				if (retVal != 0)
+				{
+					if (lua_isstring(lua_state, -1))
+					{
+						LUA_ERR_FAIL("Error loading the helper functions: " << lua_tostring(lua_state, -1));
+					}
+				}
+
+				retVal = luaL_dofile(lua_state,command_script_.c_str());
+				if (retVal != 0)
+				{
+					if (lua_isstring(lua_state, -1))
+					{
+						GINFO_STREAM("Lua error string: " << lua_tostring(lua_state, -1));
+					}
+				}
+				if (retVal == LUA_ERRSYNTAX)
+				{
+					LUA_ERR_FAIL("Syntax error in lua script!");
+				} else if (retVal == LUA_ERRFILE)
+				{
+					LUA_ERR_FAIL("Error opening file!");
+				} else if (retVal == LUA_ERRMEM)
+				{
+					LUA_ERR_FAIL("Memory error while opening file!");
+				} else if (retVal != 0)
+				{
+					LUA_ERR_FAIL("Unspecified error while opening file!");
+				}
+
+				lua_getglobal(lua_state, "_outputDatasetName");
+				if (!lua_isstring(lua_state, -1))
+				{
+					LUA_ERR_FAIL("Output dataset not set! Call registerOutput(str) at the end if your script!");
+				}
+				
+				outputFileName = lua_tostring(lua_state, -1);
+				lua_close(lua_state);
+		   }
+		   else
+		   {
+#endif
+
 	       std::string Commands_Line;
 	       std::fstream inputFile(command_script_.string());
 	       if (inputFile)
@@ -545,9 +637,15 @@ namespace Gadgetron {
 		    return GADGET_FAIL;
 	       }
 
+		   outputFileName = internal::get_output_filename(Commands_Line);
+
 	       // ==============================================================
 	       
-	       fs::path outputFile(internal::get_output_filename(Commands_Line));
+#ifdef BART_USE_LUA
+		   }
+#endif
+
+	       fs::path outputFile(outputFileName);
 	       GDEBUG_STREAM("Detected last output file: " << outputFile);
 
 	       // Reshaped data is always in-memory
@@ -642,7 +740,7 @@ namespace Gadgetron {
 	  return GADGET_OK;
      }
 
-     bool call_BART(std::string cmdline)
+     bool call_BART(std::string cmdline, std::string & outStr)
      {
 	  GINFO_STREAM("Executing BART command: " << cmdline);
 	  enum { MAX_ARGS = 256 };
@@ -678,6 +776,7 @@ namespace Gadgetron {
 	  auto ret(bart_command(512, out_str, argc, argv));
 	  if (ret == 0) {
 	       if (strlen(out_str) > 0) {
+		    outStr = out_str;
 		    GINFO(out_str);
 	       }
 	       return true;
@@ -687,6 +786,13 @@ namespace Gadgetron {
 	       return false;
 	  }
      }
+     
+     bool call_BART(std::string cmdline)
+     {
+	  std::string out("");
+	  return call_BART(cmdline, out);
+     }
+     
 
      GADGET_FACTORY_DECLARE(BartGadget)
 }

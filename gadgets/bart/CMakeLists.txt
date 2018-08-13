@@ -49,6 +49,13 @@ if(USE_CUDA)
   target_link_libraries(gadgetron_bart ${CUDA_LIBRARIES})
 endif()
 
+if(BART_USE_LUA)
+	find_package(Lua51 REQUIRED)
+	add_definitions(-DBART_USE_LUA)
+	include_directories(${LUA_INCLUDE_DIR})
+	target_link_libraries(gadgetron_bart ${LUA_LIBRARIES})
+endif()
+
 
 set_target_properties(gadgetron_bart
   PROPERTIES
