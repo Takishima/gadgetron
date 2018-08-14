@@ -316,14 +316,15 @@ namespace Gadgetron {
 		    GDEBUG_CONDITION_STREAM(isVerboseON.value(), "BartGadget::process_config: acceleration Factor along PE2 is " << p_imaging.accelerationFactor.kspace_encoding_step_2);
 		    dp.acc_factor_PE1 = p_imaging.accelerationFactor.kspace_encoding_step_1;
 		    dp.acc_factor_PE2 = p_imaging.accelerationFactor.kspace_encoding_step_2;
-
-		    if (p_imaging.accelerationFactor.kspace_encoding_step_2 > 1) {
+			dp.reference_lines_PE1 = 0;
+			dp.reference_lines_PE2 = 0;
+		    if (p_imaging.accelerationFactor.kspace_encoding_step_2 > 1 && h.userParameters->userParameterLong.size() >= 2) {
 			 GDEBUG_CONDITION_STREAM(isVerboseON.value(), "BartGadget::process_config: Limits of the size of the calibration region (PE1) " << h.userParameters->userParameterLong[0].name << " is " << h.userParameters->userParameterLong[0].value);
 			 GDEBUG_CONDITION_STREAM(isVerboseON.value(), "BartGadget::process_config: Limits of the size of the calibration region (PE2) " << h.userParameters->userParameterLong[1].name << " is " << h.userParameters->userParameterLong[1].value);
 			 dp.reference_lines_PE1 = h.userParameters->userParameterLong[0].value;
 			 dp.reference_lines_PE2 = h.userParameters->userParameterLong[1].value;
 		    }
-		    else if (p_imaging.accelerationFactor.kspace_encoding_step_1 > 1) {
+		    else if (p_imaging.accelerationFactor.kspace_encoding_step_1 > 1 && h.userParameters->userParameterLong.size() >= 1) {
 			 GDEBUG_CONDITION_STREAM(isVerboseON.value(), "BartGadget::process_config: Limits of the size of the calibration region (PE1) " << h.userParameters->userParameterLong[0].name << " is " << h.userParameters->userParameterLong[0].value);
 			 dp.reference_lines_PE1 = h.userParameters->userParameterLong[0].value;
 		    }
@@ -605,7 +606,7 @@ namespace Gadgetron {
 				lua_close(lua_state);
 		   }
 		   else
-		   {
+		   { // not Lua file
 #endif
 
 	       std::string Commands_Line;
@@ -642,7 +643,7 @@ namespace Gadgetron {
 	       // ==============================================================
 	       
 #ifdef BART_USE_LUA
-		   }
+		   } // closing the else of if (extension is lua)
 #endif
 
 	       fs::path outputFile(outputFileName);

@@ -75,7 +75,7 @@ int lua_bart(lua_State *lua_state)
 {
 	std::string outStr("");
 	
-	call_BART(luaL_checkstring(lua_state,1), outStr); 
+	auto res = Gadgetron::call_BART(luaL_checkstring(lua_state,1), outStr); 
 	if (res) // call_BART returns true in case of success
 		lua_pushstring(lua_state, outStr.c_str());
 	else

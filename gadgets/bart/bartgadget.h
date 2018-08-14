@@ -51,6 +51,8 @@
 namespace Gadgetron {
      namespace fs = boost::filesystem;
 	
+
+
      // The user is free to add more parameters as the need arises.
      struct Default_parameters 
      {
