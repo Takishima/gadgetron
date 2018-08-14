@@ -562,6 +562,9 @@ namespace Gadgetron {
 				LUA_REGISTER_PARAM(reference_lines_PE1);
 				LUA_REGISTER_PARAM(reference_lines_PE2);
 				
+			    LUA_REGISTER_STRING(ref_filename.c_str(), "reference_data");
+				LUA_REGISTER_STRING(data_filename.c_str(), "input_data");
+				LUA_REGISTER_STRING(traj_filename.c_str(), "traj_data");
 
 				int retVal;
 
