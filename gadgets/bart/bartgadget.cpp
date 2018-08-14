@@ -372,17 +372,6 @@ namespace Gadgetron {
 	  std::lock_guard<std::mutex> guard(mtx);
 
 	  GINFO_STREAM("Process start");
-
-	  constexpr auto memonly_cfl = 
-#ifdef MEMONLY_CFL
-	       true
-#else
-	       false
-#endif /* MEMONLY_CFL */
-	       ;
-	  
-	  GINFO_STREAM("Process start");
-
   
 	  auto generated_files_folder(internal::generate_unique_folder(BartWorkingDirectory_path.value()));
 
@@ -551,20 +540,19 @@ namespace Gadgetron {
 				lua_pushcfunction(lua_state, lua_bart);
 				lua_setglobal(lua_state, "bart");
 
-				LUA_REGISTER_PARAM(recon_matrix_x);
-				LUA_REGISTER_PARAM(recon_matrix_y);
-				LUA_REGISTER_PARAM(recon_matrix_z);
-				LUA_REGISTER_PARAM(FOV_x);
-				LUA_REGISTER_PARAM(FOV_y);
-				LUA_REGISTER_PARAM(FOV_z);
-				LUA_REGISTER_PARAM(acc_factor_PE1);
-				LUA_REGISTER_PARAM(acc_factor_PE2);
-				LUA_REGISTER_PARAM(reference_lines_PE1);
-				LUA_REGISTER_PARAM(reference_lines_PE2);
-				
-			    LUA_REGISTER_STRING(ref_filename.c_str(), "reference_data");
-				LUA_REGISTER_STRING(data_filename.c_str(), "input_data");
-				LUA_REGISTER_STRING(traj_filename.c_str(), "traj_data");
+				LUA_REGISTER_PARAM_NUMBER(recon_matrix_x);
+				LUA_REGISTER_PARAM_NUMBER(recon_matrix_y);
+				LUA_REGISTER_PARAM_NUMBER(recon_matrix_z);
+				LUA_REGISTER_PARAM_NUMBER(FOV_x);
+				LUA_REGISTER_PARAM_NUMBER(FOV_y);
+				LUA_REGISTER_PARAM_NUMBER(FOV_z);
+				LUA_REGISTER_PARAM_NUMBER(acc_factor_PE1);
+				LUA_REGISTER_PARAM_NUMBER(acc_factor_PE2);
+				LUA_REGISTER_PARAM_NUMBER(reference_lines_PE1);
+				LUA_REGISTER_PARAM_NUMBER(reference_lines_PE2);
+			    LUA_REGISTER_PARAM_STRING(reference_data);
+				LUA_REGISTER_PARAM_STRING(input_data);
+				LUA_REGISTER_PARAM_STRING(traj_data);
 
 				int retVal;
 

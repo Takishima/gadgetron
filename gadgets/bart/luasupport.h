@@ -26,8 +26,8 @@
 							  end"
 
 #define LUA_ERR_FAIL(msg) GERROR_STREAM(msg); lua_close(lua_state); return GADGET_FAIL
-#define LUA_REGISTER_PARAM(PARAM) lua_pushnumber(lua_state, dp.PARAM); lua_setglobal(lua_state, #PARAM)
-#define LUA_REGISTER_STRING(VAR, NAME) lua_pushstring(lua_state, VAR); lua_setglobal(lua_state, NAME)
+#define LUA_REGISTER_PARAM_NUMBER(PARAM) lua_pushnumber(lua_state, dp.PARAM); lua_setglobal(lua_state, #PARAM)
+#define LUA_REGISTER_PARAM_STRING(PARAM) lua_pushstring(lua_state, dp.PARAM.c_str()); lua_setglobal(lua_state, #PARAM)
 
 inline Gadgetron::BartGadget *lua_getgadget(lua_State *L)
 {

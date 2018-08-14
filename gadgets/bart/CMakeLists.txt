@@ -49,6 +49,7 @@ if(USE_CUDA)
   target_link_libraries(gadgetron_bart ${CUDA_LIBRARIES})
 endif()
 
+option(BART_USE_LUA "Enable LUA support in BART" ON)
 if(BART_USE_LUA)
 	find_package(Lua51 REQUIRED)
 	add_definitions(-DBART_USE_LUA)

@@ -12,7 +12,7 @@ RUN cd /opt/code && \
     cd gadgetron && \
     mkdir build && \
     cd build && \
-    CC=gcc-6 CXX=g++-6 cmake -DCUDA_NVCC_FLAGS="-ccbin gcc-6" -DBUILD_WITH_PYTHON3=ON ../ && \
+    CC=gcc-6 CXX=g++-6 cmake -DCUDA_NVCC_FLAGS="-ccbin gcc-6" -DBUILD_WITH_PYTHON3=ON -DBART_USE_LUA=ON ../ && \
     make -j $(nproc) && \
     make install && \
     /opt/code/gadgetron/docker/manifest --key .io.gadgetron.gadgetron.sha1 --value `git rev-parse HEAD` && \

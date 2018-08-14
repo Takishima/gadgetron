@@ -50,3 +50,4 @@ RUN cd /opt/code && \
     make -j $(nproc) && \
     make install
 
+RUN apt-get -y install liblua5.1-0-dev
