@@ -386,7 +386,8 @@ endif()
 add_subdirectory(test)
 add_subdirectory(cmake)
 add_subdirectory(doc)
-add_subdirectory(chroot)
+# add_subdirectory(chroot) # we now build the chroot image via docker
+add_subdirectory(docker)
 
 # install dependencies for WIN32
 if (WIN32)
