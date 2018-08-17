@@ -83,22 +83,6 @@ namespace Gadgetron {
 	  BartGadget();
 	  ~BartGadget() = default;
 
-	  void local_gdebug(std::string s)
-	  {
-		  GDEBUG_STREAM(s);
-	  }
-
-	  void local_ginfo(std::string s)
-	  {
-		  GINFO_STREAM(s);
-	  }
-
-	  void local_gerror(std::string s)
-	  {
-		  GERROR_STREAM(s);
-	  }
-
-
      protected:
 	  GADGET_PROPERTY(isVerboseON, bool, "Display some information about the incoming data", false);
 	  // This property has no effect if BartGadget is compiled with -DMEMONLY_CFL or if the memory behaviour is either BART_ALL_IN_MEM or BART_ALL_ON_DISK

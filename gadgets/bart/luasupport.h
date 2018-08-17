@@ -23,19 +23,36 @@
 							  																	\n \
 							  function registerOutput(str)										\n \
 							  		  _outputDatasetName = str 									\n \
+							  end																\n\
+							  																	\n\
+							  function bart(...)                    							\n\
+							  		  return _bart(table.concat({...}, \" \"))                  \n\
 							  end"
 
 #define LUA_ERR_FAIL(msg) GERROR_STREAM(msg); lua_close(lua_state); return GADGET_FAIL
-#define LUA_REGISTER_PARAM_NUMBER(PARAM) lua_pushnumber(lua_state, dp.PARAM); lua_setglobal(lua_state, #PARAM)
-#define LUA_REGISTER_PARAM_STRING(PARAM) lua_pushstring(lua_state, dp.PARAM.c_str()); lua_setglobal(lua_state, #PARAM)
 
+inline void _registerParam(lua_State *lua_state, lua_Number numberParam, const char *name)
+{
+	lua_pushnumber(lua_state, numberParam);
+   	lua_setglobal(lua_state, name);
+}
+
+inline void _registerParam(lua_State *lua_state, std::string stringParam, const char *name)
+{
+	lua_pushstring(lua_state, stringParam.c_str());
+   	lua_setglobal(lua_state, name);
+}
+
+#define LUA_REGISTER_PARAM(PARAM) _registerParam(lua_state, dp.PARAM, #PARAM)
+
+/*
 inline Gadgetron::BartGadget *lua_getgadget(lua_State *L)
 {
 	lua_getglobal(L, "_bartGadget");
 	auto gadget = static_cast<Gadgetron::BartGadget *>(lua_touserdata(L, -1));
 	lua_pop(L, 1);
 	return gadget;
-}
+}*/
 
 // GDEBUG wrapper
 int lua_gdebug(lua_State *L)
@@ -43,30 +60,42 @@ int lua_gdebug(lua_State *L)
 	// gets first argument (string)
 	const char *outString = luaL_checkstring(L,1);
 
-	auto gadget = lua_getgadget(L);
 	if (outString) // there is a string
 	{
-		gadget->local_gdebug(outString);
+		GDEBUG_STREAM(outString);
 	}
 	else // print out an empy ICE_OUT
 	{
-		gadget->local_gdebug("");
+		GDEBUG_STREAM("");
 	}
 	return 0; // no return values to lua
 }
 
+int lua_gerror(lua_State *L)
+{
+	// gets first argument (string)
+	const char *outString = luaL_checkstring(L,1);
+	if (outString) // there is a string
+	{
+		GERROR_STREAM(outString);
+	}
+	else // print out an empy ICE_OUT
+	{
+		GERROR_STREAM("");
+	}
+	return 0; // no return values to lua
+}
 int lua_ginfo(lua_State *L)
 {
 	// gets first argument (string)
 	const char *outString = luaL_checkstring(L,1);
-	auto gadget = lua_getgadget(L);
 	if (outString) // there is a string
 	{
-		gadget->local_ginfo(outString);
+		GINFO_STREAM(outString);
 	}
 	else // print out an empy ICE_OUT
 	{
-		gadget->local_ginfo("");
+		GINFO_STREAM("");
 	}
 	return 0; // no return values to lua
 }

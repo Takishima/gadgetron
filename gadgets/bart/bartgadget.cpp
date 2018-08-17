@@ -530,29 +530,31 @@ namespace Gadgetron {
 				luaL_openlibs(lua_state);
 
 
-				lua_pushlightuserdata(lua_state, (void*)this);
-				lua_setglobal(lua_state, "_bartGadget");
+				//lua_pushlightuserdata(lua_state, (void*)this);
+				//lua_setglobal(lua_state, "_bartGadget");
 
 				lua_pushcfunction(lua_state, lua_ginfo);
 				lua_setglobal(lua_state, "ginfo");
 				lua_pushcfunction(lua_state, lua_gdebug);
 				lua_setglobal(lua_state, "gdebug");
+				lua_pushcfunction(lua_state, lua_gerror);
+				lua_setglobal(lua_state, "gerror");
 				lua_pushcfunction(lua_state, lua_bart);
-				lua_setglobal(lua_state, "bart");
+				lua_setglobal(lua_state, "_bart");
 
-				LUA_REGISTER_PARAM_NUMBER(recon_matrix_x);
-				LUA_REGISTER_PARAM_NUMBER(recon_matrix_y);
-				LUA_REGISTER_PARAM_NUMBER(recon_matrix_z);
-				LUA_REGISTER_PARAM_NUMBER(FOV_x);
-				LUA_REGISTER_PARAM_NUMBER(FOV_y);
-				LUA_REGISTER_PARAM_NUMBER(FOV_z);
-				LUA_REGISTER_PARAM_NUMBER(acc_factor_PE1);
-				LUA_REGISTER_PARAM_NUMBER(acc_factor_PE2);
-				LUA_REGISTER_PARAM_NUMBER(reference_lines_PE1);
-				LUA_REGISTER_PARAM_NUMBER(reference_lines_PE2);
-			    LUA_REGISTER_PARAM_STRING(reference_data);
-				LUA_REGISTER_PARAM_STRING(input_data);
-				LUA_REGISTER_PARAM_STRING(traj_data);
+				LUA_REGISTER_PARAM(recon_matrix_x);
+				LUA_REGISTER_PARAM(recon_matrix_y);
+				LUA_REGISTER_PARAM(recon_matrix_z);
+				LUA_REGISTER_PARAM(FOV_x);
+				LUA_REGISTER_PARAM(FOV_y);
+				LUA_REGISTER_PARAM(FOV_z);
+				LUA_REGISTER_PARAM(acc_factor_PE1);
+				LUA_REGISTER_PARAM(acc_factor_PE2);
+				LUA_REGISTER_PARAM(reference_lines_PE1);
+				LUA_REGISTER_PARAM(reference_lines_PE2);
+			    LUA_REGISTER_PARAM(reference_data);
+				LUA_REGISTER_PARAM(input_data);
+				LUA_REGISTER_PARAM(traj_data);
 
 				int retVal;
 
