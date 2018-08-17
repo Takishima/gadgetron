@@ -23,7 +23,7 @@ RUN cd /opt/code && \
 # For mounting on the HOST
 RUN mkdir ${GADGETRON_HOME}/lib_extra
 RUN mkdir /python
-
+RUN mkdir /gadgetron_log
 
 #HASH for ISMRMRD
 RUN cd /opt/code/ismrmrd && \

@@ -19,13 +19,13 @@ serverurl=unix:///var/run/supervisor.sock ; use a unix:// URL  for a unix socket
 port=9001
 
 [program:gadgetron]
-redirect_stderr=true
-stdout_logfile = %(ENV_GADGETRON_LOG_FILENAME)s
+stderr_logfile=/gadgetron_log/gadgetron_err.log
+stdout_logfile=/gadgetron_log/gadgetron.log
 autorestart=true
 command=@CMAKE_INSTALL_PREFIX@/bin/gadgetron -r %(ENV_GADGETRON_RELAY_HOST)s
 
 [program:gadgetron_cloudbus_relay]
-redirect_stderr=true
-stdout_logfile=/tmp/gadgetron_relay.log
+stderr_logfile=/gadgetron_log/gadgetron_relay_err.log
+stdout_logfile=/gadgetron_log/gadgetron_relay.log
 autorestart=true
 command=@CMAKE_INSTALL_PREFIX@/bin/gadgetron_cloudbus_relay
