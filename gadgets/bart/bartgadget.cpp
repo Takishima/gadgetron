@@ -13,22 +13,25 @@
  ******************************************************************************/
 
 #include "bartgadget.h"
-#include <boost/tokenizer.hpp>
+#include "bart_helpers.h"
+#ifdef BART_USE_LUA
+#	include "luasupport.h"
+#endif
+
 #include <boost/algorithm/string.hpp>
-#include <sstream>
-#include <utility>
-#include <numeric>
+#include <boost/tokenizer.hpp>
+
+#include <chrono>
 #include <cstdlib>
 #include <ctime>
-#include <chrono>
-#include <memory>
-#include <random>
 #include <functional>
+#include <memory>
 #include <mutex>
-#include <boost/thread.hpp>
-#include <boost/lexical_cast.hpp>
+#include <numeric>
+#include <sstream>
+#include <utility>
 
-#include <errno.h>
+#include <cerrno>
 #ifdef _WIN32
     #include <direct.h>
     #define getcwd _getcwd
@@ -37,121 +40,28 @@
     #include <unistd.h>
 #endif
 
-#include "bart/bart_embed_api.h"
-#ifdef BART_USE_LUA
-#	include "luasupport.h"
-#endif
-
 enum bart_debug_levels { BART_DP_ERROR, BART_DP_WARN, BART_DP_INFO, BART_DP_DEBUG1, BART_DP_DEBUG2, BART_DP_DEBUG3, BART_DP_DEBUG4, BART_DP_TRACE, BART_DP_ALL };
-
-namespace internal {
-     namespace fs = Gadgetron::fs;
-     
-     class ScopeGuard
-     {
-     public:
-	  ScopeGuard(fs::path p) : p_(std::move(p))
-	       {
-		    char buf[1024] = { '\0' };
-		    auto* ptr = getcwd(buf, 1024);
-		    cwd_ = std::string(ptr);
-		    auto r = chdir(p_.c_str());
-	       }
-	  ~ScopeGuard()
-	       {
-		    if (is_active_) {
-			 fs::remove_all(p_);
-		    }
-		    auto r = chdir(cwd_.c_str());
-		    deallocate_all_mem_cfl();
-	       }
-
-	  void dismiss() { is_active_ = false; }
-     private:
-	  bool is_active_;
-	  const fs::path p_;
-	  fs::path cwd_;
-     };
-     
-     // ========================================================================
-
-     fs::path generate_unique_folder(const fs::path& working_directory)
-     {
-	  typedef std::chrono::system_clock clock_t;
-	  
-	  char buff[80];
-	  auto now = clock_t::to_time_t(clock_t::now());
-	  std::strftime(buff, sizeof(buff), "%H_%M_%S__", std::localtime(&now));
-	  std::random_device rd;
-	  auto time_id(buff + std::to_string(std::uniform_int_distribution<>(1, 10000)(rd)));
-	  // Get the current process ID
-	  auto threadId = boost::lexical_cast<std::string>(boost::this_thread::get_id());
-	  auto threadNumber(0UL);
-	  sscanf(threadId.c_str(), "%lx", &threadNumber);
-	  return  working_directory / ("bart_"
-				       + time_id
-				       + "_"
-				       + std::to_string(threadNumber));
-     }
-
-     // ========================================================================
-
-     void ltrim(std::string &str)
-     {
-	  str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](int s) {return !std::isspace(s); }));
-     }
-
-     void rtrim(std::string &str)
-     {
-	  str.erase(std::find_if(str.rbegin(), str.rend(), [](int s) {return !std::isspace(s);}).base(), str.end());
-     }
-
-     void trim(std::string &str)
-     {
-	  ltrim(str);
-	  rtrim(str);
-     }
-	
-     std::string get_output_filename(const std::string& bartCommandLine)
-     {
-	  boost::char_separator<char> sep(" ");
-#if 1
-	  boost::tokenizer<boost::char_separator<char>,
-			   std::string::const_reverse_iterator> tokens(bartCommandLine.crbegin(),
-								       bartCommandLine.crend(),
-								       sep);
-	  const auto tok(*tokens.begin());
-	  return std::string(tok.crbegin(), tok.crend());
-#else 
-	  std::string outputFile;
-	  boost::tokenizer<boost::char_separator<char> > tokens(bartCommandLine, sep);
-	  for (auto tok: tokens)
-	       outputFile = tok;
-	  return outputFile;
-#endif /* 1 */
-     }
-}
 
 // =============================================================================
 
 std::vector<size_t> Gadgetron::read_BART_hdr(fs::path filename)
 {
-     return read_BART_hdr<size_t>(filename);
+     return read_BART_hdr<size_t>(std::move(filename));
 }
 
 std::pair<std::vector<size_t>, std::vector<std::complex<float>>>
 Gadgetron::read_BART_files(fs::path filename)
 {
-     return read_BART_files<size_t>(filename);
+     return read_BART_files<size_t>(std::move(filename));
 }
 
 // =============================================================================
 
 namespace Gadgetron {
 
-     BartGadget::BartGadget() :
-	  BaseClass(),
-	  dp{}
+     BartGadget::BartGadget()
+	  : dp{}
+	  , memory_behaviour_(BART_MIX_DISK_MEM)
      {}
 
      void BartGadget::replace_default_parameters(std::string & str)
@@ -163,32 +73,45 @@ namespace Gadgetron {
 	       auto pos_diff = pos_end - pos;
 	       std::string tmp = str.substr(pos, pos_diff);
 	       tmp.erase(0, 1);
-	       if (tmp == std::string("recon_matrix_x"))
+	       if (tmp == std::string("recon_matrix_x")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.recon_matrix_x));
-	       else if (tmp == std::string("recon_matrix_y"))
+	       }
+	       else if (tmp == std::string("recon_matrix_y")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.recon_matrix_y));
-	       else if (tmp == std::string("recon_matrix_z"))
+	       }
+	       else if (tmp == std::string("recon_matrix_z")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.recon_matrix_z));
-	       else if (tmp == std::string("FOV_x"))
+	       }
+	       else if (tmp == std::string("FOV_x")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.FOV_x));
-	       else if (tmp == std::string("FOV_y"))
+	       }
+	       else if (tmp == std::string("FOV_y")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.FOV_y));
-	       else if (tmp == std::string("FOV_z"))
+	       }
+	       else if (tmp == std::string("FOV_z")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.FOV_z));
-	       else if (tmp == std::string("acc_factor_PE1"))
+	       }
+	       else if (tmp == std::string("acc_factor_PE1")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.acc_factor_PE1));
-	       else if (tmp == std::string("acc_factor_PE2"))
+	       }
+	       else if (tmp == std::string("acc_factor_PE2")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.acc_factor_PE2));
-	       else if (tmp == std::string("reference_lines_PE1"))
+	       }
+	       else if (tmp == std::string("reference_lines_PE1")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.reference_lines_PE1));
-	       else if (tmp == std::string("reference_lines_PE2"))
+	       }
+	       else if (tmp == std::string("reference_lines_PE2")) {
 		    str.replace(pos, pos_diff, std::to_string(dp.reference_lines_PE2));
-	       else if (tmp == std::string("input_data"))
+	       }
+	       else if (tmp == std::string("input_data")) {
 		    str.replace(pos, pos_diff, dp.input_data);
-	       else if (tmp == std::string("reference_data"))
+	       }
+	       else if (tmp == std::string("reference_data")) {
 		    str.replace(pos, pos_diff, dp.reference_data);
-	       else if (tmp == std::string("traj_data"))
+	       }
+	       else if (tmp == std::string("traj_data")) {
 		    str.replace(pos, pos_diff, dp.traj_data);
+	       }
 	       else {
 		    GERROR( "Unknown default parameter, please see the complete list of available parameters...");
 	       }
@@ -324,18 +247,18 @@ namespace Gadgetron {
 			 dp.reference_lines_PE1 = h.userParameters->userParameterLong[0].value;
 			 dp.reference_lines_PE2 = h.userParameters->userParameterLong[1].value;
 		    }
-		    else if (p_imaging.accelerationFactor.kspace_encoding_step_1 > 1 && h.userParameters->userParameterLong.size() >= 1) {
+		    else if (p_imaging.accelerationFactor.kspace_encoding_step_1 > 1 && !h.userParameters->userParameterLong.empty()) {
 			 GDEBUG_CONDITION_STREAM(isVerboseON.value(), "BartGadget::process_config: Limits of the size of the calibration region (PE1) " << h.userParameters->userParameterLong[0].name << " is " << h.userParameters->userParameterLong[0].value);
 			 dp.reference_lines_PE1 = h.userParameters->userParameterLong[0].value;
 		    }
 
 		    auto calib = *p_imaging.calibrationMode;
-		    auto separate = (calib.compare("separate") == 0);
-		    auto embedded = (calib.compare("embedded") == 0);
-		    auto external = (calib.compare("external") == 0);
-		    auto interleaved = (calib.compare("interleaved") == 0);
-		    auto other = (calib.compare("other") == 0);
-
+		    auto separate(calib == "separate");
+		    auto embedded(calib == "embedded");
+		    auto external(calib == "external");
+		    auto interleaved(calib == "interleaved");
+		    auto other(calib == "other");
+		    
 		    if (p_imaging.accelerationFactor.kspace_encoding_step_1 > 1 || p_imaging.accelerationFactor.kspace_encoding_step_2 > 1)
 		    {
 			 if (interleaved) {
@@ -477,35 +400,37 @@ namespace Gadgetron {
 	       }
 
 	       std::ostringstream cmd2;
-	       if (DIMS[4] != 1)
+	       if (DIMS[4] != 1) {
 		    cmd2 << "bart reshape 1023 " << DIMS[0] << " " << DIMS[1] << " " << DIMS[2] << " " << DIMS[3] << " 1 1 1 " << DIMS[5] << " " << DIMS[6] << " " << DIMS[4];
-	       else	
+	       }
+	       else {
 		    cmd2 << "bart copy";
+	       }
 
 	       cmd2 << " " << data_filename_src << " " << dp.input_data;
 	       
 	       GDEBUG_STREAM("Gadgetron data is loaded to " << data_filename_src);
 	       GDEBUG_STREAM("BART filename for data is " << dp.input_data);
 	       
-	       if (!call_BART(cmd2.str()))
-	       {
+	       if (!call_BART(cmd2.str())) {
 		    return GADGET_FAIL;
 	       }
 
 	       if (has_traj) {
 		    std::ostringstream cmd3;
-		    if (DIMS[4] != 1)
+		    if (DIMS[4] != 1) {
 			 cmd3 << "bart reshape 1023 " << DIMS[0] << " " << DIMS[1] << " " << DIMS[2] << " " << DIMS[3] << " 1 1 1 " << DIMS[5] << " " << DIMS[6] << " " << DIMS[4];
-		    else	
+		    }
+		    else {
 			 cmd3 << "bart copy";
+		    }
 		    
 		    cmd3 << " " << traj_filename_src << " " << dp.traj_data;
 	       
 		    GDEBUG_STREAM("Gadgetron trajectory is loaded to " << traj_filename_src);
 		    GDEBUG_STREAM("BART filename for trajectory is " << dp.traj_data);
 		    
-		    if (!call_BART(cmd3.str()))
-		    {
+		    if (!call_BART(cmd3.str())) {
 			 return GADGET_FAIL;
 		    }
 	       }
@@ -513,7 +438,7 @@ namespace Gadgetron {
 	       /*** CALL BART COMMAND LINE from the scripting file ***/
 	       GDEBUG("Starting processing user script\n");
 
-		   std::string outputFileName;
+	       std::string outputFileName;
 
 #ifdef BART_USE_LUA
 		   std::string ext = fs::path(command_script_).extension().string();
@@ -604,17 +529,16 @@ namespace Gadgetron {
 
 	       std::string Commands_Line;
 	       std::fstream inputFile(command_script_.string());
-	       if (inputFile)
-	       {
+	       if (inputFile) {
 		    std::string Line;
-		    while (getline(inputFile, Line))
-		    {
+		    while (getline(inputFile, Line)) {
 			 // crop comment
-			 Line = Line.substr(0, Line.find_first_of("#"));
+			 Line = Line.substr(0, Line.find_first_of('#'));
 
 			 internal::trim(Line);
-			 if (Line.empty() || Line.compare(0, 4, "bart") != 0)
+			 if (Line.empty() || Line.compare(0, 4, "bart") != 0) {
 			      continue;
+			 }
 				
 			 replace_default_parameters(Line);
 			 if (!call_BART(Line))
@@ -625,8 +549,7 @@ namespace Gadgetron {
 			 Commands_Line = Line;
 		    }
 	       }
-	       else
-	       {
+	       else {
 		    GERROR("Unable to open %s\n", command_script_.c_str());
 		    return GADGET_FAIL;
 	       }
@@ -673,7 +596,7 @@ namespace Gadgetron {
 	       std::vector<long> DIMS_OUT(16);
 	       auto data = reinterpret_cast<std::complex<float>*>(load_mem_cfl(outputFileReshape.c_str(), DIMS_OUT.size(), DIMS_OUT.data()));
 	       
-	       if (data == 0 || data == nullptr) {
+	       if (data == nullptr) {
 		    GERROR("Failed to retrieve data from in-memory CFL file!");
 		    return GADGET_FAIL;
 	       }
@@ -687,7 +610,7 @@ namespace Gadgetron {
 
 	       // Grab data from BART files
 	       std::vector<size_t> BART_DATA_dims{
-		    static_cast<size_t>(std::accumulate(DIMS_OUT.begin(), DIMS_OUT.end(), 1, std::multiplies<size_t>()))};
+		    static_cast<size_t>(std::accumulate(DIMS_OUT.begin(), DIMS_OUT.end(), 1, std::multiplies<>()))};
 	       hoNDArray<std::complex<float>> DATA(BART_DATA_dims, data);
 
 	       // The image array data will be [E0,E1,E2,1,N,S,LOC]
@@ -706,7 +629,7 @@ namespace Gadgetron {
 	       imarray.data_.create(data_dims_Final);
 
 	       std::vector<std::complex<float> > DATA_Final;
-	       DATA_Final.reserve(std::accumulate(data_dims_Final.begin(), data_dims_Final.end(), 1, std::multiplies<size_t>()));
+	       DATA_Final.reserve(std::accumulate(data_dims_Final.begin(), data_dims_Final.end(), 1, std::multiplies<>()));
 
 	       //Each chunk will be [E0,E1,E2,CHA] big
 	       std::vector<size_t> chunk_dims{data_dims_Final[0], data_dims_Final[1], data_dims_Final[2], data_dims_Final[3]};
@@ -734,7 +657,7 @@ namespace Gadgetron {
 	  return GADGET_OK;
      }
 
-     bool call_BART(std::string cmdline, std::string & outStr)
+     bool call_BART(const std::string& cmdline, std::string & outStr)
      {
 	  GINFO_STREAM("Executing BART command: " << cmdline);
 	  enum { MAX_ARGS = 256 };
@@ -746,7 +669,7 @@ namespace Gadgetron {
 	  strcpy(cmdline_s.get(), cmdline.c_str());
 
 	  char *p2 = strtok(cmdline_s.get(), " ");
-	  while (p2 && argc < MAX_ARGS-1)
+	  while (p2 != nullptr && argc < MAX_ARGS-1)
 	  {
 	       argv[argc++] = p2;
 	       p2 = strtok(0, " ");
@@ -775,18 +698,17 @@ namespace Gadgetron {
 	       }
 	       return true;
 	  }
-	  else {
-	       GERROR_STREAM("BART command failed with return code: " << ret);
-	       return false;
-	  }
+	  
+	  GERROR_STREAM("BART command failed with return code: " << ret);
+	  return false;
      }
      
-     bool call_BART(std::string cmdline)
+     bool call_BART(const std::string& cmdline)
      {
-	  std::string out("");
+	  std::string out;
 	  return call_BART(cmdline, out);
      }
      
 
      GADGET_FACTORY_DECLARE(BartGadget)
-}
+} // namespace Gadgetron

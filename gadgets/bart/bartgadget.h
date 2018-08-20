@@ -50,12 +50,13 @@
 
 namespace Gadgetron {
      namespace fs = boost::filesystem;
-	
-
 
      // The user is free to add more parameters as the need arises.
      struct Default_parameters 
      {
+	  Default_parameters() = default;
+	  ~Default_parameters() = default;
+	  
 	  uint16_t recon_matrix_x;
 	  uint16_t recon_matrix_y;
 	  uint16_t recon_matrix_z;
@@ -109,7 +110,6 @@ namespace Gadgetron {
 #endif /* MEMONLY_CFL */
 	       ;
 	
-
 	  Default_parameters dp;
 	  bart_memory_behaviour memory_behaviour_;
 	  fs::path command_script_;
@@ -118,8 +118,8 @@ namespace Gadgetron {
 	  
      };
 
-     bool call_BART(std::string cmdline, std::string & outStr);
-     bool call_BART(std::string cmdline);
+     bool call_BART(const std::string& cmdline, std::string & outStr);
+     bool call_BART(const std::string& cmdline);
 
      // Read BART files     
      template <typename int_t>

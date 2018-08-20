@@ -11,12 +11,12 @@ void vendor_log(int level,
 		unsigned int line,
 		const char* message)
 {
-     const auto fname(file + std::string(" (BART)"));
+     const auto fname(file + std::string(" (BART: ") + func_name + ")");
      const auto msg (message + std::string("\n"));
      
      if (-1 == debug_level) {
 	  char* str = getenv("DEBUG_LEVEL");
-	  debug_level = (NULL != str) ? atoi(str) : DP_INFO;
+	  debug_level = (nullptr != str) ? atoi(str) : DP_INFO;
      }
 
      if (level <= debug_level) {
